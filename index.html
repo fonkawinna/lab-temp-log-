@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บันทึกอุณหภูมิ-ความชื้น | The Dark Lab QC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg: #0b1420;
+    --panel: #101c2c;
+    --line: #24384f;
+    --ink: #eaf1f7;
+    --ink-dim: #9fb2c5;
+    --teal: #2dd4bf;
+    --teal-dim: #0f766e;
+    --amber: #f5b942;
+    --red: #ef4770;
+    --red-bg: rgba(239,71,112,0.12);
+    --ok-bg: rgba(45,212,191,0.10);
+    --radius: 14px;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Sarabun', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  #app{max-width:920px; margin:0 auto; padding:18px 16px 60px;}
+
+  header.top{
+    display:flex; align-items:center; gap:12px; padding:6px 2px 18px;
+    border-bottom:1px solid var(--line); margin-bottom:18px;
+  }
+  .logo-mark{
+    width:38px; height:38px; border-radius:10px; flex:none;
+    background:linear-gradient(155deg, var(--teal) 0%, var(--teal-dim) 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:600; font-size:13px; color:#04201c;
+  }
+  header.top h1{font-size:16px; margin:0; font-weight:600; letter-spacing:.2px;}
+  header.top p{margin:2px 0 0; font-size:12px; color:var(--ink-dim); font-family:var(--mono);}
+
+  nav.tabs{display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;}
+  nav.tabs button{
+    flex:1 1 auto; min-width:96px; padding:10px 10px; border-radius:10px;
+    border:1px solid var(--line); background:var(--panel); color:var(--ink-dim);
+    font-family:var(--sans); font-size:13px; font-weight:600; cursor:pointer;
+    transition:.15s;
+  }
+  nav.tabs button.active{ background:var(--teal-dim); border-color:var(--teal); color:#eafffb;}
+  nav.tabs button:hover:not(.active){ border-color:#3a5875; color:var(--ink);}
+
+  section.view{display:none;}
+  section.view.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(3px);} to{opacity:1; transform:none;}}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px; margin-bottom:16px;
+  }
+  .card h2{font-size:14px; margin:0 0 14px; color:var(--ink); font-weight:600;}
+  .card h2 .eyebrow{display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:1.5px; color:var(--teal); font-weight:600; margin-bottom:4px; text-transform:uppercase;}
+
+  .seg{display:flex; gap:6px; margin-bottom:16px;}
+  .seg button{
+    flex:1; padding:10px; border-radius:10px; border:1px solid var(--line);
+    background:var(--bg); color:var(--ink-dim); font-family:var(--sans); font-weight:600;
+    font-size:13.5px; cursor:pointer;
+  }
+  .seg button.active{background:rgba(45,212,191,0.14); border-color:var(--teal); color:var(--teal);}
+
+  label{display:block; font-size:12px; color:var(--ink-dim); margin:0 0 6px; font-weight:500;}
+  .field{margin-bottom:14px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .row3{display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:end;}
+  input[type=text], input[type=number], input[type=date], select, textarea{
+    width:100%; padding:11px 12px; border-radius:9px; border:1px solid var(--line);
+    background:var(--bg); color:var(--ink); font-family:var(--mono); font-size:14px;
+  }
+  textarea{font-family:var(--sans); resize:vertical; min-height:60px;}
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--teal);}
+  select:disabled{opacity:.5;}
+  .unit-wrap{position:relative;}
+  .unit-wrap span{position:absolute; right:12px; top:11px; color:var(--ink-dim); font-family:var(--mono); font-size:13px; pointer-events:none;}
+  .hint{font-size:11.5px; color:var(--ink-dim); margin-top:6px; line-height:1.5;}
+  .hint.warn{color:var(--amber);}
+
+  .slot-row{display:flex; gap:8px;}
+  .slot-row label.slotbtn{
+    flex:1; border:1px solid var(--line); border-radius:9px; padding:10px; text-align:center;
+    cursor:pointer; font-family:var(--mono); font-size:13.5px; color:var(--ink-dim); margin:0;
+  }
+  .slot-row input[type=radio]{display:none;}
+  .slot-row input[type=radio]:checked + label.slotbtn{background:rgba(45,212,191,0.14); border-color:var(--teal); color:var(--teal);}
+
+  button.primary{
+    width:100%; padding:13px; border-radius:10px; border:none; cursor:pointer;
+    background:var(--teal); color:#04201c; font-weight:700; font-size:14.5px; font-family:var(--sans);
+    margin-top:4px;
+  }
+  button.primary:active{transform:scale(.99);}
+  button.primary:disabled{opacity:.4; cursor:not-allowed;}
+  button.danger{
+    width:100%; padding:12px; border-radius:10px; border:1px solid rgba(239,71,112,.5); cursor:pointer;
+    background:var(--red-bg); color:var(--red); font-weight:700; font-size:13.5px; font-family:var(--sans);
+    margin-top:10px;
+  }
+  button.danger:disabled{opacity:.4; cursor:not-allowed;}
+  button.ghost{
+    padding:9px 14px; border-radius:9px; border:1px solid var(--line); background:transparent;
+    color:var(--ink-dim); font-family:var(--sans); font-size:12.5px; cursor:pointer; font-weight:600;
+  }
+  button.ghost:hover{border-color:var(--teal); color:var(--teal);}
+  button.add-btn{
+    padding:11px 16px; border-radius:9px; border:none; background:var(--teal); color:#04201c;
+    font-weight:700; font-size:13.5px; cursor:pointer; white-space:nowrap;
+  }
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--teal); color:#04201c; padding:11px 20px; border-radius:30px;
+    font-weight:700; font-size:13.5px; opacity:0; transition:.25s; pointer-events:none; z-index:50;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.alert{background:var(--red); color:#fff;}
+
+  .today-list{margin-top:4px;}
+  .today-list h3{font-size:11.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:1px; margin:18px 0 8px; font-family:var(--mono);}
+  .reading-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 12px; border-radius:9px; background:var(--bg); border:1px solid var(--line); margin-bottom:6px;
+    flex-wrap:wrap;
+  }
+  .reading-row .meta{font-size:12.5px; color:var(--ink-dim);}
+  .reading-row .meta b{color:var(--ink); font-weight:600;}
+  .reading-row .meta .note{display:block; margin-top:3px; color:var(--ink-dim); font-style:italic;}
+  .reading-row .vals{display:flex; gap:8px; align-items:center;}
+  .pill{
+    font-family:var(--mono); font-size:12.5px; padding:4px 9px; border-radius:20px; font-weight:600;
+    background:var(--ok-bg); color:var(--teal); border:1px solid rgba(45,212,191,.35);
+  }
+  .pill.out{background:var(--red-bg); color:var(--red); border-color:rgba(239,71,112,.4);}
+  .pill.status-open{background:var(--red-bg); color:var(--red); border-color:rgba(239,71,112,.4);}
+  .pill.status-resolved{background:var(--ok-bg); color:var(--teal); border-color:rgba(45,212,191,.35);}
+  .del-btn{background:none; border:none; color:var(--ink-dim); cursor:pointer; font-size:16px; padding:2px 6px;}
+  .del-btn:hover{color:var(--red);}
+
+  .filters{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;}
+  .filters .full{grid-column:1/-1;}
+  .range-btns{display:flex; gap:6px; grid-column:1/-1;}
+  .range-btns button{flex:1; padding:8px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink-dim); font-size:12.5px; font-family:var(--sans); font-weight:600; cursor:pointer;}
+  .range-btns button.active{background:rgba(45,212,191,0.14); border-color:var(--teal); color:var(--teal);}
+  .custom-range{display:none; grid-template-columns:1fr 1fr; gap:12px; grid-column:1/-1;}
+  .custom-range.show{display:grid;}
+
+  .chart-wrap{background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:14px 10px 6px; margin-bottom:16px;}
+  .chart-wrap canvas{max-height:260px;}
+
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  th, td{padding:8px 6px; text-align:left; border-bottom:1px solid var(--line); font-family:var(--mono);}
+  th{color:var(--ink-dim); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.5px;}
+  td.out{color:var(--red); font-weight:600;}
+  td.note-cell{font-family:var(--sans); color:var(--ink-dim); max-width:160px;}
+  .table-scroll{overflow-x:auto;}
+  .empty-state{text-align:center; padding:30px 10px; color:var(--ink-dim); font-size:13px;}
+  .empty-state .big{font-size:26px; display:block; margin-bottom:8px;}
+
+  .qr-box{display:flex; flex-direction:column; align-items:center; gap:14px; padding:10px 0 4px;}
+  #qrcode{background:#fff; padding:14px; border-radius:12px;}
+  .qr-box p{font-size:12.5px; color:var(--ink-dim); text-align:center; max-width:400px; line-height:1.6; margin:0;}
+  .url-box{
+    font-family:var(--mono); font-size:11.5px; background:var(--bg); border:1px solid var(--line);
+    border-radius:8px; padding:9px 11px; word-break:break-all; color:var(--teal); width:100%; text-align:center;
+  }
+
+  .thr-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  .thr-grid .g{font-size:11px; color:var(--ink-dim); margin-bottom:6px; font-family:var(--mono); text-transform:uppercase;}
+
+  .maint-row{border-left:3px solid var(--red);}
+  .maint-row.resolved{border-left-color:var(--teal); opacity:.75;}
+  .maint-actions{display:flex; gap:6px;}
+
+  footer.note{text-align:center; font-size:11px; color:var(--ink-dim); margin-top:20px; font-family:var(--mono); line-height:1.7;}
+
+  @media(max-width:520px){
+    .row2, .filters{grid-template-columns:1fr;}
+    .row3{grid-template-columns:1fr;}
+    .thr-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="top">
+    <div class="logo-mark">QC</div>
+    <div>
+      <h1>บันทึกอุณหภูมิ &amp; ความชื้น</h1>
+      <p>ห้องปฏิบัติการ &middot; The Dark Lab</p>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="record" class="active">📝 บันทึกข้อมูล</button>
+    <button data-tab="view">📊 ดูข้อมูล/กราฟ</button>
+    <button data-tab="maintenance">🛠 แจ้งซ่อม</button>
+    <button data-tab="qr">🔗 QR Code</button>
+    <button data-tab="settings">⚙️ ตั้งค่า</button>
+  </nav>
+
+  <!-- RECORD TAB -->
+  <section class="view active" id="tab-record">
+    <div class="card">
+      <h2><span class="eyebrow">บันทึกค่าใหม่</span>เลือกจุดตรวจวัด</h2>
+
+      <div class="seg" id="typeSeg">
+        <button type="button" data-type="room" class="active">🏠 ห้อง (อุณหภูมิ+ความชื้น)</button>
+        <button type="button" data-type="fridge">🧊 ตู้เย็น (อุณหภูมิเท่านั้น)</button>
+      </div>
+
+      <div class="field">
+        <label>ชื่อผู้บันทึก</label>
+        <input type="text" id="recorderInput" placeholder="เช่น ฝน, สมชาย">
+      </div>
+
+      <div class="field">
+        <label id="locLabel">เลือกห้อง</label>
+        <select id="locSelect"><option value="">— เลือกตำแหน่ง —</option></select>
+        <div class="hint warn" id="noLocHint" style="display:none;">ยังไม่มีรายการตำแหน่งสำหรับประเภทนี้ — ไปเพิ่มได้ที่แท็บ "⚙️ ตั้งค่า"</div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>วันที่</label>
+          <input type="date" id="dateInput">
+        </div>
+        <div class="field">
+          <label>ช่วงเวลา</label>
+          <div class="slot-row">
+            <input type="radio" name="slot" id="slot08" value="08:00">
+            <label class="slotbtn" for="slot08">08:00 น.</label>
+            <input type="radio" name="slot" id="slot20" value="20:00">
+            <label class="slotbtn" for="slot20">20:00 น.</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" id="tempFieldWrap">
+        <label id="tempLabel">อุณหภูมิ</label>
+        <div class="unit-wrap"><input type="number" step="0.1" id="tempInput" placeholder="0.0"><span>°C</span></div>
+      </div>
+      <div class="field" id="humField">
+        <label>ความชื้นสัมพัทธ์ <span style="color:var(--ink-dim); font-weight:400;">(ถ้ามี)</span></label>
+        <div class="unit-wrap"><input type="number" step="1" id="humInput" placeholder="0"><span>%RH</span></div>
+      </div>
+
+      <div class="field">
+        <label>โน้ต (ถ้ามี)</label>
+        <textarea id="noteInput" placeholder="เช่น เครื่องแกว่ง, เปิดตู้บ่อยช่วงเช้า..."></textarea>
+      </div>
+
+      <button class="primary" id="saveBtn">บันทึกค่า</button>
+      <button class="danger" id="reportBrokenBtn">🛠 แจ้งเสีย / แจ้งซ่อม</button>
+      <div class="hint">การกด "แจ้งเสีย/แจ้งซ่อม" ไม่จำเป็นต้องกรอกตัวเลข แต่ต้องเลือกตำแหน่งและใส่โน้ตอธิบายปัญหา</div>
+
+      <div class="today-list" id="todayList"></div>
+    </div>
+  </section>
+
+  <!-- VIEW TAB -->
+  <section class="view" id="tab-view">
+    <div class="card">
+      <h2><span class="eyebrow">ข้อมูลย้อนหลัง</span>ตัวกรอง</h2>
+      <div class="filters">
+        <div class="field full" style="margin-bottom:0;">
+          <label>ประเภท</label>
+          <select id="fType">
+            <option value="all">ทั้งหมด</option>
+            <option value="room">ห้อง</option>
+            <option value="fridge">ตู้เย็น</option>
+          </select>
+        </div>
+        <div class="field full" style="margin-bottom:0;">
+          <label>ตำแหน่ง</label>
+          <select id="fLocation"><option value="all">ทั้งหมด</option></select>
+        </div>
+        <div class="range-btns" id="rangeBtns">
+          <button data-range="7" class="active">7 วันล่าสุด</button>
+          <button data-range="30">30 วันล่าสุด</button>
+          <button data-range="90">3 เดือนล่าสุด</button>
+          <button data-range="custom">กำหนดเอง</button>
+        </div>
+        <div class="custom-range" id="customRange">
+          <div class="field" style="margin-bottom:0;"><label>ตั้งแต่</label><input type="date" id="fStart"></div>
+          <div class="field" style="margin-bottom:0;"><label>ถึง</label><input type="date" id="fEnd"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="chartCard">
+      <h2><span class="eyebrow">กราฟแนวโน้ม</span>อุณหภูมิ / ความชื้น</h2>
+      <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
+      <div class="chart-wrap" id="humChartWrap"><canvas id="humChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="eyebrow">ตารางข้อมูล</span>รายการบันทึก</h2>
+      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+        <button class="ghost" id="exportBtn">⬇ ส่งออก CSV</button>
+      </div>
+      <div class="table-scroll" id="tableWrap"></div>
+    </div>
+  </section>
+
+  <!-- MAINTENANCE TAB -->
+  <section class="view" id="tab-maintenance">
+    <div class="card">
+      <h2><span class="eyebrow">รายการแจ้งซ่อม</span>สถานะการแจ้งเสีย</h2>
+      <div class="filters" style="margin-bottom:10px;">
+        <div class="field full" style="margin-bottom:0;">
+          <label>แสดง</label>
+          <select id="mFilter">
+            <option value="open">ยังไม่ซ่อม</option>
+            <option value="resolved">ซ่อมแล้ว</option>
+            <option value="all">ทั้งหมด</option>
+          </select>
+        </div>
+      </div>
+      <div id="maintList"></div>
+    </div>
+  </section>
+
+  <!-- QR TAB -->
+  <section class="view" id="tab-qr">
+    <div class="card">
+      <h2><span class="eyebrow">เข้าใช้งานด่วน</span>QR Code สำหรับสแกนเข้าโปรแกรม</h2>
+      <div class="qr-box">
+        <div id="qrcode"></div>
+        <div class="url-box" id="urlBox">กำลังโหลดลิงก์...</div>
+        <p>
+          ให้เจ้าหน้าที่แสกน QR นี้เพื่อเข้าบันทึกอุณหภูมิ/ความชื้นได้ทันที ลิงก์นี้จะใช้งานได้ถาวรตราบเท่าที่หน้าเว็บนี้ยัง
+          ถูกโฮสต์อยู่ที่ URL เดิม (เช่น GitHub Pages) และ Google Apps Script ยังถูก Deploy อยู่ — แนะนำให้ปริ้น QR นี้ติดหน้าห้อง/ตู้เย็น
+        </p>
+        <button class="ghost" id="reloadQr">🔄 สร้าง QR ใหม่จากลิงก์ปัจจุบัน</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS TAB -->
+  <section class="view" id="tab-settings">
+    <div class="card">
+      <h2><span class="eyebrow">การเชื่อมต่อฐานข้อมูล</span>Google Sheets Web App URL</h2>
+      <div class="field">
+        <label>ลิงก์ Web App ที่ได้จากการ Deploy บน Google Apps Script</label>
+        <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/xxxxx/exec">
+      </div>
+      <div class="row2">
+        <button class="add-btn" id="saveGasUrlBtn" style="width:100%;">บันทึกลิงก์</button>
+        <button class="ghost" id="testGasBtn" style="width:100%;">ทดสอบการเชื่อมต่อ</button>
+      </div>
+      <div class="hint" id="gasStatus" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <h2><span class="eyebrow">จัดการตำแหน่ง</span>เพิ่มชื่อห้อง / ชื่อตู้เย็น</h2>
+      <div class="row3">
+        <div class="field" style="margin-bottom:0;">
+          <label>ประเภท</label>
+          <select id="newLocType">
+            <option value="room">ห้อง</option>
+            <option value="fridge">ตู้เย็น</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>ชื่อ / หมายเลข</label>
+          <input type="text" id="newLocName" placeholder="เช่น ห้อง Lab 1 หรือ ตู้เย็นเบอร์ 3">
+        </div>
+        <button class="add-btn" id="addLocBtn">+ เพิ่ม</button>
+      </div>
+      <div class="hint">รายการที่เพิ่มไว้นี้จะไปปรากฏเป็นตัวเลือกในหน้า "บันทึกข้อมูล" ทันที</div>
+
+      <div id="locManageList" style="margin-top:16px;"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="eyebrow">ค่ามาตรฐาน QC</span>เกณฑ์แจ้งเตือนค่าผิดปกติ</h2>
+      <div class="thr-grid">
+        <div>
+          <div class="g">อุณหภูมิห้อง (°C)</div>
+          <div class="row2"><input type="number" id="thRoomTempMin" step="0.1"><input type="number" id="thRoomTempMax" step="0.1"></div>
+        </div>
+        <div>
+          <div class="g">ความชื้นห้อง (%RH)</div>
+          <div class="row2"><input type="number" id="thRoomHumMin" step="1"><input type="number" id="thRoomHumMax" step="1"></div>
+        </div>
+        <div>
+          <div class="g">อุณหภูมิตู้เย็น (°C)</div>
+          <div class="row2"><input type="number" id="thFridgeMin" step="0.1"><input type="number" id="thFridgeMax" step="0.1"></div>
+        </div>
+      </div>
+      <button class="primary" id="saveThresholds" style="margin-top:16px;">บันทึกเกณฑ์</button>
+    </div>
+  </section>
+
+  <footer class="note">ข้อมูลถูกเก็บใน Google Sheets ของคุณเอง ผ่าน Apps Script Web App — ทุกคนที่เปิดหน้านี้เห็นข้อมูลชุดเดียวกัน</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'lab-qc-readings';
+const LOC_KEY = 'lab-qc-locations';
+const THR_KEY = 'lab-qc-thresholds';
+const MAINT_KEY = 'lab-qc-maintenance';
+const DEFAULT_THR = { roomTemp:[20,26], roomHum:[40,60], fridgeTemp:[2,8] };
+
+// ===== Google Sheets backend config =====
+// วางลิงก์ Web App ที่ได้จาก Deploy ใน Google Apps Script ตรงนี้
+let GAS_URL = 'https://script.google.com/macros/s/AKfycbyxIfs1gkRjbqiP8zzCe3SvqarPOTifi_o2SQwcEDkymSI0J-zD41qryH9p_-QXlb7_zw/exec';
+const savedGasUrl = localStorage.getItem('gasUrl');
+if ((!GAS_URL || GAS_URL.indexOf('PASTE_YOUR') > -1) && savedGasUrl) GAS_URL = savedGasUrl;
+
+const gsStorage = {
+  async get(key){
+    if(!GAS_URL || GAS_URL.indexOf('PASTE_YOUR') > -1) return null;
+    const res = await fetch(GAS_URL + '?key=' + encodeURIComponent(key));
+    const data = await res.json();
+    if(data.value === null || data.value === undefined || data.value === '') return null;
+    return { key, value: data.value };
+  },
+  async set(key, value){
+    if(!GAS_URL || GAS_URL.indexOf('PASTE_YOUR') > -1){ toast('ยังไม่ได้ตั้งค่าลิงก์ฐานข้อมูล — ไปที่แท็บตั้งค่า', true); return null; }
+    await fetch(GAS_URL, {
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify({ key, value })
+    });
+    return { key, value };
+  }
+};
+
+let readings = [];
+let locations = { room: [], fridge: [] };
+let thresholds = JSON.parse(JSON.stringify(DEFAULT_THR));
+let maintenance = [];
+let currentType = 'room';
+let tempChart, humChart;
+
+function toast(msg, alert){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('alert', !!alert);
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+async function loadAll(){
+  try{ const r = await gsStorage.get(STORE_KEY); readings = r ? JSON.parse(r.value) : []; }catch(e){ readings = []; }
+  try{ const l = await gsStorage.get(LOC_KEY); locations = l ? JSON.parse(l.value) : { room: [], fridge: [] }; }catch(e){ locations = { room: [], fridge: [] }; }
+  try{ const th = await gsStorage.get(THR_KEY); thresholds = th ? JSON.parse(th.value) : JSON.parse(JSON.stringify(DEFAULT_THR)); }catch(e){ thresholds = JSON.parse(JSON.stringify(DEFAULT_THR)); }
+  try{ const m = await gsStorage.get(MAINT_KEY); maintenance = m ? JSON.parse(m.value) : []; }catch(e){ maintenance = []; }
+}
+
+async function saveReadings(){ await gsStorage.set(STORE_KEY, JSON.stringify(readings)); }
+async function saveLocations(){ await gsStorage.set(LOC_KEY, JSON.stringify(locations)); }
+async function saveThresholds(){ await gsStorage.set(THR_KEY, JSON.stringify(thresholds)); }
+async function saveMaintenance(){ await gsStorage.set(MAINT_KEY, JSON.stringify(maintenance)); }
+
+// ---------- Tabs ----------
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section.view').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab === 'view') renderView();
+    if(btn.dataset.tab === 'qr') renderQr();
+    if(btn.dataset.tab === 'settings') renderSettings();
+    if(btn.dataset.tab === 'maintenance') renderMaintenance();
+    if(btn.dataset.tab === 'record') refreshLocSelect();
+  });
+});
+
+// ---------- Record tab ----------
+document.getElementById('typeSeg').addEventListener('click', (e)=>{
+  const b = e.target.closest('button'); if(!b) return;
+  currentType = b.dataset.type;
+  document.querySelectorAll('#typeSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById('humField').style.display = currentType==='room' ? 'block' : 'none';
+  document.getElementById('locLabel').textContent = currentType==='room' ? 'เลือกห้อง' : 'เลือกตู้เย็น';
+  document.getElementById('tempLabel').textContent = currentType==='room' ? 'อุณหภูมิ' : 'อุณหภูมิตู้เย็น';
+  refreshLocSelect();
+  renderTodayList();
+});
+
+function refreshLocSelect(){
+  const sel = document.getElementById('locSelect');
+  const list = locations[currentType] || [];
+  sel.innerHTML = '<option value="">— เลือกตำแหน่ง —</option>' + list.map(l=>`<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+  const noLocHint = document.getElementById('noLocHint');
+  const hasLocs = list.length > 0;
+  noLocHint.style.display = hasLocs ? 'none' : 'block';
+  sel.disabled = !hasLocs;
+  document.getElementById('saveBtn').disabled = !hasLocs;
+  document.getElementById('reportBrokenBtn').disabled = !hasLocs;
+}
+
+function defaultSlot(){ const h = new Date().getHours(); return h < 14 ? '08:00' : '20:00'; }
+function todayStr(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function nowTimeStr(){ const d = new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+
+function initRecordForm(){
+  document.getElementById('dateInput').value = todayStr();
+  const slot = defaultSlot();
+  document.getElementById(slot==='08:00'?'slot08':'slot20').checked = true;
+  document.getElementById('humField').style.display = currentType==='room' ? 'block' : 'none';
+  const savedRecorder = localStorage.getItem('recorderName');
+  if(savedRecorder) document.getElementById('recorderInput').value = savedRecorder;
+  refreshLocSelect();
+  renderTodayList();
+}
+
+function statusFor(type, field, value){
+  let range;
+  if(type==='fridge') range = thresholds.fridgeTemp;
+  else if(field==='temp') range = thresholds.roomTemp;
+  else range = thresholds.roomHum;
+  if(value === null || value === undefined || isNaN(value)) return 'ok';
+  return (value < range[0] || value > range[1]) ? 'out' : 'ok';
+}
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const recorder = document.getElementById('recorderInput').value.trim();
+  const loc = document.getElementById('locSelect').value;
+  const date = document.getElementById('dateInput').value;
+  const slotEl = document.querySelector('input[name=slot]:checked');
+  const temp = parseFloat(document.getElementById('tempInput').value);
+  const humRaw = document.getElementById('humInput').value;
+  const hum = currentType === 'room' && humRaw !== '' ? parseFloat(humRaw) : null;
+  const note = document.getElementById('noteInput').value.trim();
+
+  if(!recorder){ toast('กรุณากรอกชื่อผู้บันทึก'); return; }
+  if(!loc){ toast('กรุณาเลือกตำแหน่ง'); return; }
+  if(!date){ toast('กรุณาเลือกวันที่'); return; }
+  if(!slotEl){ toast('กรุณาเลือกช่วงเวลา'); return; }
+  if(isNaN(temp)){ toast('กรุณากรอกอุณหภูมิ'); return; }
+
+  localStorage.setItem('recorderName', recorder);
+
+  const slot = slotEl.value;
+  const existingIdx = readings.findIndex(r=>r.type===currentType && r.location===loc && r.date===date && r.slot===slot);
+  if(existingIdx > -1){
+    if(!confirm('มีข้อมูลของ '+loc+' วันที่ '+date+' ช่วง '+slot+' อยู่แล้ว ต้องการแก้ไขค่าเดิมหรือไม่?')) return;
+    readings[existingIdx] = {...readings[existingIdx], temp, hum, note, recorder, recordedAt: Date.now()};
+  } else {
+    readings.push({
+      id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()),
+      type: currentType, location: loc, date, slot, temp, hum, note, recorder, recordedAt: Date.now()
+    });
+  }
+  await saveReadings();
+  toast('บันทึกสำเร็จ ✓');
+  document.getElementById('tempInput').value = '';
+  document.getElementById('humInput').value = '';
+  document.getElementById('noteInput').value = '';
+  renderTodayList();
+});
+
+document.getElementById('reportBrokenBtn').addEventListener('click', async ()=>{
+  const recorder = document.getElementById('recorderInput').value.trim();
+  const loc = document.getElementById('locSelect').value;
+  const note = document.getElementById('noteInput').value.trim();
+  const date = document.getElementById('dateInput').value || todayStr();
+
+  if(!recorder){ toast('กรุณากรอกชื่อผู้แจ้ง'); return; }
+  if(!loc){ toast('กรุณาเลือกตำแหน่งก่อนแจ้งซ่อม'); return; }
+  if(!note){ toast('กรุณาใส่โน้ตอธิบายปัญหาก่อนแจ้งซ่อม'); return; }
+  if(!confirm('ยืนยันแจ้งเสีย/แจ้งซ่อม สำหรับ "'+loc+'" ?')) return;
+
+  localStorage.setItem('recorderName', recorder);
+
+  maintenance.push({
+    id:(crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()),
+    type: currentType, location: loc, date, time: nowTimeStr(), note, recorder,
+    status:'open', recordedAt: Date.now(), resolvedAt: null
+  });
+  await saveMaintenance();
+  toast('แจ้งซ่อมแล้ว — ดูรายการได้ที่แท็บ "แจ้งซ่อม"', true);
+  document.getElementById('noteInput').value = '';
+});
+
+function renderTodayList(){
+  const wrap = document.getElementById('todayList');
+  const today = todayStr();
+  const todays = readings.filter(r=>r.type===currentType && r.date===today).sort((a,b)=>a.slot.localeCompare(b.slot));
+  if(todays.length === 0){ wrap.innerHTML = '<h3>วันนี้ยังไม่มีข้อมูล</h3>'; return; }
+  wrap.innerHTML = '<h3>บันทึกวันนี้ (' + (currentType==='room'?'ห้อง':'ตู้เย็น') + ')</h3>' +
+    todays.map(r=>{
+      const ts = statusFor(r.type,'temp', r.temp);
+      const hs = r.hum!==null && r.hum!==undefined ? statusFor(r.type,'hum', r.hum) : null;
+      return `<div class="reading-row">
+        <div class="meta"><b>${escapeHtml(r.location)}</b> &middot; ${r.slot} น. ${r.recorder ? '&middot; โดย '+escapeHtml(r.recorder) : ''}
+          ${r.note ? `<span class="note">📝 ${escapeHtml(r.note)}</span>` : ''}
+        </div>
+        <div class="vals">
+          <span class="pill ${ts==='out'?'out':''}">${r.temp.toFixed(1)}°C</span>
+          ${hs!==null ? `<span class="pill ${hs==='out'?'out':''}">${r.hum}%RH</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+// ---------- View tab ----------
+document.getElementById('fType').addEventListener('change', ()=>{ populateLocFilter(); renderView(); });
+document.getElementById('fLocation').addEventListener('change', renderView);
+document.getElementById('rangeBtns').addEventListener('click', (e)=>{
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#rangeBtns button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById('customRange').classList.toggle('show', b.dataset.range==='custom');
+  if(b.dataset.range !== 'custom') renderView();
+});
+document.getElementById('fStart').addEventListener('change', renderView);
+document.getElementById('fEnd').addEventListener('change', renderView);
+
+function populateLocFilter(){
+  const type = document.getElementById('fType').value;
+  const sel = document.getElementById('fLocation');
+  const prev = sel.value;
+  let opts = ['<option value="all">ทั้งหมด</option>'];
+  const locs = type==='all' ? [...new Set([...locations.room, ...locations.fridge])] : (locations[type]||[]);
+  locs.forEach(l=> opts.push(`<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`));
+  sel.innerHTML = opts.join('');
+  if(locs.includes(prev)) sel.value = prev;
+}
+
+function getFilteredReadings(){
+  const type = document.getElementById('fType').value;
+  const loc = document.getElementById('fLocation').value;
+  const activeRangeBtn = document.querySelector('#rangeBtns button.active');
+  const rangeVal = activeRangeBtn ? activeRangeBtn.dataset.range : '7';
+  let start, end;
+  const now = new Date();
+  if(rangeVal === 'custom'){
+    start = document.getElementById('fStart').value || '0000-01-01';
+    end = document.getElementById('fEnd').value || todayStr();
+  } else {
+    const days = parseInt(rangeVal,10);
+    const s = new Date(now); s.setDate(s.getDate()-days+1);
+    start = s.toISOString().slice(0,10);
+    end = todayStr();
+  }
+  return readings.filter(r=>{
+    if(type!=='all' && r.type!==type) return false;
+    if(loc!=='all' && r.location!==loc) return false;
+    if(r.date < start || r.date > end) return false;
+    return true;
+  }).sort((a,b)=> (a.date+a.slot).localeCompare(b.date+b.slot));
+}
+
+function renderView(){ populateLocFilter(); const data = getFilteredReadings(); renderCharts(data); renderTable(data); }
+
+function renderCharts(data){
+  const labels = data.map(r=> r.date.slice(5)+' '+r.slot);
+  const tempCtx = document.getElementById('tempChart').getContext('2d');
+  const humCtx = document.getElementById('humChart').getContext('2d');
+  const showHum = data.some(r=>r.hum!==null && r.hum!==undefined);
+  document.getElementById('humChartWrap').style.display = showHum ? 'block' : 'none';
+  const gridColor = '#24384f', textColor = '#9fb2c5';
+
+  if(tempChart) tempChart.destroy();
+  tempChart = new Chart(tempCtx, {
+    type:'line',
+    data:{ labels, datasets:[{
+      label:'อุณหภูมิ (°C)', data: data.map(r=>r.temp),
+      borderColor:'#2dd4bf', backgroundColor:'rgba(45,212,191,0.12)',
+      pointBackgroundColor: data.map(r=> statusFor(r.type,'temp',r.temp)==='out' ? '#ef4770' : '#2dd4bf'),
+      pointRadius:4, tension:.3, fill:true
+    }]},
+    options:{ responsive:true,
+      plugins:{ legend:{labels:{color:textColor}}, title:{display:true, text:'แนวโน้มอุณหภูมิ', color:'#eaf1f7', font:{size:12}} },
+      scales:{ x:{ticks:{color:textColor, maxRotation:60}, grid:{color:gridColor}}, y:{ticks:{color:textColor}, grid:{color:gridColor}} }
+    }
+  });
+
+  if(humChart) humChart.destroy();
+  if(showHum){
+    humChart = new Chart(humCtx, {
+      type:'line',
+      data:{ labels, datasets:[{
+        label:'ความชื้นสัมพัทธ์ (%RH)', data: data.map(r=> r.hum),
+        borderColor:'#f5b942', backgroundColor:'rgba(245,185,66,0.12)',
+        pointBackgroundColor: data.map(r=> r.hum!==null && statusFor(r.type,'hum',r.hum)==='out' ? '#ef4770' : '#f5b942'),
+        pointRadius:4, tension:.3, fill:true, spanGaps:true
+      }]},
+      options:{ responsive:true,
+        plugins:{ legend:{labels:{color:textColor}}, title:{display:true, text:'แนวโน้มความชื้น', color:'#eaf1f7', font:{size:12}} },
+        scales:{ x:{ticks:{color:textColor, maxRotation:60}, grid:{color:gridColor}}, y:{ticks:{color:textColor}, grid:{color:gridColor}} }
+      }
+    });
+  }
+}
+
+function renderTable(data){
+  const wrap = document.getElementById('tableWrap');
+  if(data.length===0){ wrap.innerHTML = '<div class="empty-state"><span class="big">📭</span>ไม่มีข้อมูลในช่วงที่เลือก</div>'; return; }
+  const rows = data.slice().reverse().map(r=>{
+    const ts = statusFor(r.type,'temp', r.temp);
+    const hs = r.hum!==null && r.hum!==undefined ? statusFor(r.type,'hum', r.hum) : null;
+    return `<tr>
+      <td>${r.date}</td><td>${r.slot}</td>
+      <td>${r.type==='room'?'ห้อง':'ตู้เย็น'}</td>
+      <td>${escapeHtml(r.location)}</td>
+      <td class="${ts==='out'?'out':''}">${r.temp.toFixed(1)}</td>
+      <td class="${hs==='out'?'out':''}">${r.hum!==null && r.hum!==undefined ? r.hum : '—'}</td>
+      <td class="note-cell">${r.note ? escapeHtml(r.note) : '—'}</td>
+      <td>${r.recorder ? escapeHtml(r.recorder) : '—'}</td>
+      <td><button class="del-btn" data-id="${r.id}" title="ลบ">✕</button></td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table>
+    <thead><tr><th>วันที่</th><th>เวลา</th><th>ประเภท</th><th>ตำแหน่ง</th><th>อุณหภูมิ °C</th><th>%RH</th><th>โน้ต</th><th>ผู้บันทึก</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+  wrap.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('ลบข้อมูลนี้หรือไม่?')) return;
+      readings = readings.filter(r=>r.id !== btn.dataset.id);
+      await saveReadings();
+      renderView(); renderTodayList();
+    });
+  });
+}
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const data = getFilteredReadings();
+  if(data.length===0){ toast('ไม่มีข้อมูลให้ส่งออก'); return; }
+  const header = 'วันที่,เวลา,ประเภท,ตำแหน่ง,อุณหภูมิ(C),ความชื้น(%RH),โน้ต,ผู้บันทึก\n';
+  const esc = (s)=> '"'+String(s===undefined||s===null?'':s).replace(/"/g,'""')+'"';
+  const rows = data.map(r=> [r.date, r.slot, r.type==='room'?'ห้อง':'ตู้เย็น', esc(r.location), r.temp, r.hum!==null&&r.hum!==undefined?r.hum:'', esc(r.note||''), esc(r.recorder||'')].join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+header+rows], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'lab-temp-log-'+todayStr()+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ---------- Maintenance tab ----------
+document.getElementById('mFilter').addEventListener('change', renderMaintenance);
+
+function renderMaintenance(){
+  const filter = document.getElementById('mFilter').value;
+  const wrap = document.getElementById('maintList');
+  let list = maintenance.slice().sort((a,b)=> b.recordedAt - a.recordedAt);
+  if(filter !== 'all') list = list.filter(m=>m.status===filter);
+
+  if(list.length === 0){
+    wrap.innerHTML = '<div class="empty-state"><span class="big">✅</span>ไม่มีรายการแจ้งซ่อม' + (filter==='open' ? 'ที่ค้างอยู่' : '') + '</div>';
+    return;
+  }
+  wrap.innerHTML = list.map(m=>`
+    <div class="reading-row maint-row ${m.status==='resolved'?'resolved':''}">
+      <div class="meta">
+        <b>${escapeHtml(m.location)}</b> &middot; ${m.type==='room'?'ห้อง':'ตู้เย็น'} &middot; ${m.date} ${m.time} ${m.recorder ? '&middot; แจ้งโดย '+escapeHtml(m.recorder) : ''}
+        <span class="note">📝 ${escapeHtml(m.note)}</span>
+      </div>
+      <div class="maint-actions">
+        <span class="pill status-${m.status}">${m.status==='resolved'?'ซ่อมแล้ว':'ยังไม่ซ่อม'}</span>
+        ${m.status==='open'
+          ? `<button class="ghost" data-resolve="${m.id}">✓ ทำเครื่องหมายว่าซ่อมแล้ว</button>`
+          : `<button class="ghost" data-reopen="${m.id}">↺ เปิดใหม่</button>`}
+        <button class="del-btn" data-del="${m.id}" title="ลบ">✕</button>
+      </div>
+    </div>`).join('');
+
+  wrap.querySelectorAll('[data-resolve]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const item = maintenance.find(m=>m.id===btn.dataset.resolve);
+      if(item){ item.status='resolved'; item.resolvedAt = Date.now(); await saveMaintenance(); renderMaintenance(); toast('อัปเดตเป็น "ซ่อมแล้ว" ✓'); }
+    });
+  });
+  wrap.querySelectorAll('[data-reopen]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const item = maintenance.find(m=>m.id===btn.dataset.reopen);
+      if(item){ item.status='open'; item.resolvedAt = null; await saveMaintenance(); renderMaintenance(); }
+    });
+  });
+  wrap.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('ลบรายการแจ้งซ่อมนี้หรือไม่?')) return;
+      maintenance = maintenance.filter(m=>m.id !== btn.dataset.del);
+      await saveMaintenance(); renderMaintenance();
+    });
+  });
+}
+
+// ---------- QR tab ----------
+function renderQr(){
+  const url = window.location.href;
+  document.getElementById('urlBox').textContent = url;
+  const box = document.getElementById('qrcode');
+  box.innerHTML = '';
+  new QRCode(box, { text: url, width: 200, height: 200, colorDark:'#0b1420', colorLight:'#ffffff' });
+}
+document.getElementById('reloadQr').addEventListener('click', renderQr);
+
+// ---------- Settings tab: DB connection ----------
+document.getElementById('saveGasUrlBtn').addEventListener('click', async ()=>{
+  const val = document.getElementById('gasUrlInput').value.trim();
+  if(!val){ toast('กรุณาใส่ลิงก์ Web App'); return; }
+  GAS_URL = val;
+  localStorage.setItem('gasUrl', val);
+  toast('บันทึกลิงก์แล้ว — กำลังโหลดข้อมูลใหม่...');
+  await loadAll();
+  initRecordForm();
+  document.getElementById('gasStatus').textContent = '';
+});
+document.getElementById('testGasBtn').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('gasStatus');
+  statusEl.textContent = 'กำลังทดสอบ...';
+  try{
+    const res = await gsStorage.get(THR_KEY);
+    statusEl.textContent = '✅ เชื่อมต่อสำเร็จ';
+    statusEl.style.color = 'var(--teal)';
+  }catch(e){
+    statusEl.textContent = '❌ เชื่อมต่อไม่สำเร็จ ตรวจสอบลิงก์และการตั้งค่า Deploy (Who has access: Anyone)';
+    statusEl.style.color = 'var(--red)';
+  }
+});
+
+// ---------- Settings tab ----------
+document.getElementById('addLocBtn').addEventListener('click', async ()=>{
+  const type = document.getElementById('newLocType').value;
+  const name = document.getElementById('newLocName').value.trim();
+  if(!name){ toast('กรุณากรอกชื่อตำแหน่ง'); return; }
+  if(locations[type].includes(name)){ toast('มีชื่อนี้อยู่แล้ว'); return; }
+  locations[type].push(name);
+  await saveLocations();
+  document.getElementById('newLocName').value = '';
+  toast('เพิ่มตำแหน่งแล้ว ✓');
+  renderSettings();
+  refreshLocSelect();
+});
+
+function renderSettings(){
+  document.getElementById('thRoomTempMin').value = thresholds.roomTemp[0];
+  document.getElementById('thRoomTempMax').value = thresholds.roomTemp[1];
+  document.getElementById('thRoomHumMin').value = thresholds.roomHum[0];
+  document.getElementById('thRoomHumMax').value = thresholds.roomHum[1];
+  document.getElementById('thFridgeMin').value = thresholds.fridgeTemp[0];
+  document.getElementById('thFridgeMax').value = thresholds.fridgeTemp[1];
+
+  const list = document.getElementById('locManageList');
+  const all = [...locations.room.map(l=>({type:'room', name:l})), ...locations.fridge.map(l=>({type:'fridge', name:l}))];
+  if(all.length===0){ list.innerHTML = '<div class="empty-state">ยังไม่มีตำแหน่งที่บันทึกไว้ — เพิ่มด้านบนได้เลย</div>'; return; }
+  list.innerHTML = all.map(l=>`
+    <div class="reading-row">
+      <div class="meta"><b>${escapeHtml(l.name)}</b> &middot; ${l.type==='room'?'ห้อง':'ตู้เย็น'}</div>
+      <button class="del-btn" data-type="${l.type}" data-name="${escapeHtml(l.name)}" title="ลบตำแหน่งนี้">✕</button>
+    </div>`).join('');
+  list.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const type = btn.dataset.type, name = btn.dataset.name;
+      if(!confirm('ลบตำแหน่ง "'+name+'" ออกจากรายการ? (ข้อมูลที่บันทึกไว้เดิมจะไม่ถูกลบ)')) return;
+      locations[type] = locations[type].filter(x=>x!==name);
+      await saveLocations();
+      renderSettings();
+      refreshLocSelect();
+    });
+  });
+}
+
+document.getElementById('saveThresholds').addEventListener('click', async ()=>{
+  thresholds.roomTemp = [parseFloat(document.getElementById('thRoomTempMin').value), parseFloat(document.getElementById('thRoomTempMax').value)];
+  thresholds.roomHum = [parseFloat(document.getElementById('thRoomHumMin').value), parseFloat(document.getElementById('thRoomHumMax').value)];
+  thresholds.fridgeTemp = [parseFloat(document.getElementById('thFridgeMin').value), parseFloat(document.getElementById('thFridgeMax').value)];
+  await saveThresholds();
+  toast('บันทึกเกณฑ์แล้ว ✓');
+});
+
+// ---------- Init ----------
+(async function init(){
+  const gasInput = document.getElementById('gasUrlInput');
+  if(gasInput) gasInput.value = (GAS_URL && GAS_URL.indexOf('PASTE_YOUR') === -1) ? GAS_URL : '';
+  if(!GAS_URL || GAS_URL.indexOf('PASTE_YOUR') > -1){
+    toast('ยังไม่ได้ตั้งค่าฐานข้อมูล — ไปที่แท็บ ⚙️ ตั้งค่า เพื่อใส่ลิงก์ Google Sheets', true);
+  }
+  await loadAll();
+  initRecordForm();
+})();
+</script>
+</body>
+</html>
