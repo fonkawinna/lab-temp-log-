@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>บันทึกอุณหภูมิ-ความชื้น | The Dark Lab QC</title>
+<title>บันทึกอุณหภูมิ-ความชื้น | ห้องปฏิบัติการกลาง รพ.เลิดสิน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
@@ -202,7 +202,7 @@
     <div class="logo-mark">QC</div>
     <div>
       <h1>บันทึกอุณหภูมิ &amp; ความชื้น</h1>
-      <p>ห้องปฏิบัติการ &middot; The Dark Lab</p>
+      <p>ห้องปฏิบัติการกลาง &middot; รพ.เลิดสิน</p>
     </div>
   </header>
 
@@ -421,7 +421,7 @@ const DEFAULT_THR = { roomTemp:[20,26], roomHum:[40,60], fridgeTemp:[2,8] };
 
 // ===== Google Sheets backend config =====
 // วางลิงก์ Web App ที่ได้จาก Deploy ใน Google Apps Script ตรงนี้
-let GAS_URL = 'https://script.google.com/macros/s/AKfycbyxIfs1gkRjbqiP8zzCe3SvqarPOTifi_o2SQwcEDkymSI0J-zD41qryH9p_-QXlb7_zw/exec';
+let GAS_URL = 'https://script.google.com/macros/s/AKfycbz0AXWOeTjQ6k085Jvm-ojFxXuIgfBIM0bGhmlu2mGsUTdxGOQdsGsPH1ccC7DSdTtM/exec';
 const savedGasUrl = localStorage.getItem('gasUrl');
 if ((!GAS_URL || GAS_URL.indexOf('PASTE_YOUR') > -1) && savedGasUrl) GAS_URL = savedGasUrl;
 
