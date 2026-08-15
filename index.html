@@ -67,11 +67,11 @@
   .card h2{font-size:14px; margin:0 0 14px; color:var(--ink); font-weight:600;}
   .card h2 .eyebrow{display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:1.5px; color:var(--teal); font-weight:600; margin-bottom:4px; text-transform:uppercase;}
 
-  .seg{display:flex; gap:6px; margin-bottom:16px;}
+  .seg{display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;}
   .seg button{
-    flex:1; padding:10px; border-radius:10px; border:1px solid var(--line);
+    flex:1 1 30%; min-width:100px; padding:10px 6px; border-radius:10px; border:1px solid var(--line);
     background:var(--bg); color:var(--ink-dim); font-family:var(--sans); font-weight:600;
-    font-size:13.5px; cursor:pointer;
+    font-size:12.5px; cursor:pointer;
   }
   .seg button.active{background:rgba(45,212,191,0.14); border-color:var(--teal); color:var(--teal);}
 
@@ -126,6 +126,7 @@
     position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
     background:var(--teal); color:#04201c; padding:11px 20px; border-radius:30px;
     font-weight:700; font-size:13.5px; opacity:0; transition:.25s; pointer-events:none; z-index:50;
+    max-width:90%; text-align:center;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
   .toast.alert{background:var(--red); color:#fff;}
@@ -179,19 +180,19 @@
     border-radius:8px; padding:9px 11px; word-break:break-all; color:var(--teal); width:100%; text-align:center;
   }
 
-  .thr-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
-  .thr-grid .g{font-size:11px; color:var(--ink-dim); margin-bottom:6px; font-family:var(--mono); text-transform:uppercase;}
+  .thr-grid{display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px;}
+  .thr-grid .g{font-size:10.5px; color:var(--ink-dim); margin-bottom:6px; font-family:var(--mono); text-transform:uppercase;}
 
   .maint-row{border-left:3px solid var(--red);}
   .maint-row.resolved{border-left-color:var(--teal); opacity:.75;}
-  .maint-actions{display:flex; gap:6px;}
+  .maint-actions{display:flex; gap:6px; flex-wrap:wrap;}
 
   footer.note{text-align:center; font-size:11px; color:var(--ink-dim); margin-top:20px; font-family:var(--mono); line-height:1.7;}
 
   @media(max-width:520px){
     .row2, .filters{grid-template-columns:1fr;}
     .row3{grid-template-columns:1fr;}
-    .thr-grid{grid-template-columns:1fr;}
+    .thr-grid{grid-template-columns:1fr 1fr;}
   }
 </style>
 </head>
@@ -220,8 +221,9 @@
       <h2><span class="eyebrow">บันทึกค่าใหม่</span>เลือกจุดตรวจวัด</h2>
 
       <div class="seg" id="typeSeg">
-        <button type="button" data-type="room" class="active">🏠 ห้อง (อุณหภูมิ+ความชื้น)</button>
-        <button type="button" data-type="fridge">🧊 ตู้เย็น (อุณหภูมิเท่านั้น)</button>
+        <button type="button" data-type="room" class="active">🏠 ห้อง</button>
+        <button type="button" data-type="fridge">🧊 ตู้เย็น (2-8°C)</button>
+        <button type="button" data-type="freezer">❄️ ตู้แช่แข็ง (-20°C)</button>
       </div>
 
       <div class="field">
@@ -283,7 +285,8 @@
           <select id="fType">
             <option value="all">ทั้งหมด</option>
             <option value="room">ห้อง</option>
-            <option value="fridge">ตู้เย็น</option>
+            <option value="fridge">ตู้เย็น (2-8°C)</option>
+            <option value="freezer">ตู้แช่แข็ง (-20°C)</option>
           </select>
         </div>
         <div class="field full" style="margin-bottom:0;">
@@ -311,7 +314,8 @@
 
     <div class="card">
       <h2><span class="eyebrow">ตารางข้อมูล</span>รายการบันทึก</h2>
-      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+      <div style="display:flex; justify-content:flex-end; margin-bottom:10px; gap:8px;">
+        <button class="ghost" id="refreshBtn">🔄 รีเฟรชข้อมูล</button>
         <button class="ghost" id="exportBtn">⬇ ส่งออก CSV</button>
       </div>
       <div class="table-scroll" id="tableWrap"></div>
@@ -367,13 +371,14 @@
       <div class="hint" id="gasStatus" style="margin-top:10px;"></div>
     </div>
     <div class="card">
-      <h2><span class="eyebrow">จัดการตำแหน่ง</span>เพิ่มชื่อห้อง / ชื่อตู้เย็น</h2>
+      <h2><span class="eyebrow">จัดการตำแหน่ง</span>เพิ่มชื่อห้อง / ตู้เย็น / ตู้แช่แข็ง</h2>
       <div class="row3">
         <div class="field" style="margin-bottom:0;">
           <label>ประเภท</label>
           <select id="newLocType">
             <option value="room">ห้อง</option>
-            <option value="fridge">ตู้เย็น</option>
+            <option value="fridge">ตู้เย็น (2-8°C)</option>
+            <option value="freezer">ตู้แช่แข็ง (-20°C)</option>
           </select>
         </div>
         <div class="field" style="margin-bottom:0;">
@@ -399,8 +404,12 @@
           <div class="row2"><input type="number" id="thRoomHumMin" step="1"><input type="number" id="thRoomHumMax" step="1"></div>
         </div>
         <div>
-          <div class="g">อุณหภูมิตู้เย็น (°C)</div>
+          <div class="g">ตู้เย็น (°C)</div>
           <div class="row2"><input type="number" id="thFridgeMin" step="0.1"><input type="number" id="thFridgeMax" step="0.1"></div>
+        </div>
+        <div>
+          <div class="g">ตู้แช่แข็ง (°C)</div>
+          <div class="row2"><input type="number" id="thFreezerMin" step="0.1"><input type="number" id="thFreezerMax" step="0.1"></div>
         </div>
       </div>
       <button class="primary" id="saveThresholds" style="margin-top:16px;">บันทึกเกณฑ์</button>
@@ -417,35 +426,80 @@ const STORE_KEY = 'lab-qc-readings';
 const LOC_KEY = 'lab-qc-locations';
 const THR_KEY = 'lab-qc-thresholds';
 const MAINT_KEY = 'lab-qc-maintenance';
-const DEFAULT_THR = { roomTemp:[20,26], roomHum:[40,60], fridgeTemp:[2,8] };
+const DEFAULT_THR = { roomTemp:[20,26], roomHum:[40,60], fridgeTemp:[2,8], freezerTemp:[-25,-15] };
+const DEFAULT_LOCS = { room: [], fridge: [], freezer: [] };
 
 // ===== Google Sheets backend config =====
-// วางลิงก์ Web App ที่ได้จาก Deploy ใน Google Apps Script ตรงนี้
 let GAS_URL = 'https://script.google.com/macros/s/AKfycbz0AXWOeTjQ6k085Jvm-ojFxXuIgfBIM0bGhmlu2mGsUTdxGOQdsGsPH1ccC7DSdTtM/exec';
 const savedGasUrl = localStorage.getItem('gasUrl');
 if ((!GAS_URL || GAS_URL.indexOf('PASTE_YOUR') > -1) && savedGasUrl) GAS_URL = savedGasUrl;
 
+// JSONP helper — bypasses browser CORS restrictions entirely for GET/read requests
+function jsonp(url){
+  return new Promise((resolve, reject)=>{
+    const cbName = 'gsCb_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    let settled = false;
+    window[cbName] = (data)=>{
+      settled = true;
+      cleanup();
+      resolve(data);
+    };
+    function cleanup(){
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+    script.onerror = ()=>{ if(!settled){ settled = true; cleanup(); reject(new Error('JSONP load error')); } };
+    script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+    document.body.appendChild(script);
+    setTimeout(()=>{ if(!settled){ settled = true; cleanup(); reject(new Error('JSONP timeout')); } }, 12000);
+  });
+}
+
 const gsStorage = {
   async get(key){
     if(!GAS_URL || GAS_URL.indexOf('PASTE_YOUR') > -1) return null;
-    const res = await fetch(GAS_URL + '?key=' + encodeURIComponent(key));
-    const data = await res.json();
-    if(data.value === null || data.value === undefined || data.value === '') return null;
-    return { key, value: data.value };
+    try{
+      const data = await jsonp(GAS_URL + '?key=' + encodeURIComponent(key));
+      if(!data || data.value === null || data.value === undefined || data.value === '') return null;
+      return { key, value: data.value };
+    }catch(e){
+      console.error('gsStorage.get failed for', key, e);
+      return null;
+    }
   },
   async set(key, value){
     if(!GAS_URL || GAS_URL.indexOf('PASTE_YOUR') > -1){ toast('ยังไม่ได้ตั้งค่าลิงก์ฐานข้อมูล — ไปที่แท็บตั้งค่า', true); return null; }
-    await fetch(GAS_URL, {
-      method:'POST',
-      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
-      body: JSON.stringify({ key, value })
-    });
+    try{
+      await fetch(GAS_URL, {
+        method:'POST',
+        headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+        body: JSON.stringify({ key, value })
+      });
+    }catch(e){
+      console.error('gsStorage.set failed for', key, e);
+      toast('บันทึกไม่สำเร็จ — ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต', true);
+      return null;
+    }
     return { key, value };
   }
 };
 
+function typeLabel(type){
+  if(type==='room') return 'ห้อง';
+  if(type==='fridge') return 'ตู้เย็น (2-8°C)';
+  if(type==='freezer') return 'ตู้แช่แข็ง (-20°C)';
+  return type;
+}
+function typeLabelShort(type){
+  if(type==='room') return 'ห้อง';
+  if(type==='fridge') return 'ตู้เย็น';
+  if(type==='freezer') return 'ตู้แช่แข็ง';
+  return type;
+}
+
 let readings = [];
-let locations = { room: [], fridge: [] };
+let locations = JSON.parse(JSON.stringify(DEFAULT_LOCS));
 let thresholds = JSON.parse(JSON.stringify(DEFAULT_THR));
 let maintenance = [];
 let currentType = 'room';
@@ -456,13 +510,17 @@ function toast(msg, alert){
   t.textContent = msg;
   t.classList.toggle('alert', !!alert);
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2400);
+  setTimeout(()=>t.classList.remove('show'), 2600);
 }
 
 async function loadAll(){
   try{ const r = await gsStorage.get(STORE_KEY); readings = r ? JSON.parse(r.value) : []; }catch(e){ readings = []; }
-  try{ const l = await gsStorage.get(LOC_KEY); locations = l ? JSON.parse(l.value) : { room: [], fridge: [] }; }catch(e){ locations = { room: [], fridge: [] }; }
+  try{ const l = await gsStorage.get(LOC_KEY); locations = l ? JSON.parse(l.value) : JSON.parse(JSON.stringify(DEFAULT_LOCS)); }catch(e){ locations = JSON.parse(JSON.stringify(DEFAULT_LOCS)); }
+  if(!locations.freezer) locations.freezer = [];
+  if(!locations.room) locations.room = [];
+  if(!locations.fridge) locations.fridge = [];
   try{ const th = await gsStorage.get(THR_KEY); thresholds = th ? JSON.parse(th.value) : JSON.parse(JSON.stringify(DEFAULT_THR)); }catch(e){ thresholds = JSON.parse(JSON.stringify(DEFAULT_THR)); }
+  if(!thresholds.freezerTemp) thresholds.freezerTemp = JSON.parse(JSON.stringify(DEFAULT_THR.freezerTemp));
   try{ const m = await gsStorage.get(MAINT_KEY); maintenance = m ? JSON.parse(m.value) : []; }catch(e){ maintenance = []; }
 }
 
@@ -473,15 +531,15 @@ async function saveMaintenance(){ await gsStorage.set(MAINT_KEY, JSON.stringify(
 
 // ---------- Tabs ----------
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
+  btn.addEventListener('click', async ()=>{
     document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('section.view').forEach(s=>s.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-    if(btn.dataset.tab === 'view') renderView();
+    if(btn.dataset.tab === 'view'){ await loadAll(); renderView(); }
     if(btn.dataset.tab === 'qr') renderQr();
     if(btn.dataset.tab === 'settings') renderSettings();
-    if(btn.dataset.tab === 'maintenance') renderMaintenance();
+    if(btn.dataset.tab === 'maintenance'){ await loadAll(); renderMaintenance(); }
     if(btn.dataset.tab === 'record') refreshLocSelect();
   });
 });
@@ -493,8 +551,8 @@ document.getElementById('typeSeg').addEventListener('click', (e)=>{
   document.querySelectorAll('#typeSeg button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
   document.getElementById('humField').style.display = currentType==='room' ? 'block' : 'none';
-  document.getElementById('locLabel').textContent = currentType==='room' ? 'เลือกห้อง' : 'เลือกตู้เย็น';
-  document.getElementById('tempLabel').textContent = currentType==='room' ? 'อุณหภูมิ' : 'อุณหภูมิตู้เย็น';
+  document.getElementById('locLabel').textContent = 'เลือก' + typeLabel(currentType);
+  document.getElementById('tempLabel').textContent = currentType==='room' ? 'อุณหภูมิ' : 'อุณหภูมิ' + typeLabelShort(currentType);
   refreshLocSelect();
   renderTodayList();
 });
@@ -528,7 +586,8 @@ function initRecordForm(){
 
 function statusFor(type, field, value){
   let range;
-  if(type==='fridge') range = thresholds.fridgeTemp;
+  if(type==='freezer') range = thresholds.freezerTemp;
+  else if(type==='fridge') range = thresholds.fridgeTemp;
   else if(field==='temp') range = thresholds.roomTemp;
   else range = thresholds.roomHum;
   if(value === null || value === undefined || isNaN(value)) return 'ok';
@@ -600,7 +659,7 @@ function renderTodayList(){
   const today = todayStr();
   const todays = readings.filter(r=>r.type===currentType && r.date===today).sort((a,b)=>a.slot.localeCompare(b.slot));
   if(todays.length === 0){ wrap.innerHTML = '<h3>วันนี้ยังไม่มีข้อมูล</h3>'; return; }
-  wrap.innerHTML = '<h3>บันทึกวันนี้ (' + (currentType==='room'?'ห้อง':'ตู้เย็น') + ')</h3>' +
+  wrap.innerHTML = '<h3>บันทึกวันนี้ (' + typeLabel(currentType) + ')</h3>' +
     todays.map(r=>{
       const ts = statusFor(r.type,'temp', r.temp);
       const hs = r.hum!==null && r.hum!==undefined ? statusFor(r.type,'hum', r.hum) : null;
@@ -630,13 +689,19 @@ document.getElementById('rangeBtns').addEventListener('click', (e)=>{
 });
 document.getElementById('fStart').addEventListener('change', renderView);
 document.getElementById('fEnd').addEventListener('change', renderView);
+document.getElementById('refreshBtn').addEventListener('click', async ()=>{
+  toast('กำลังโหลดข้อมูลใหม่...');
+  await loadAll();
+  renderView();
+  toast('อัปเดตข้อมูลแล้ว ✓');
+});
 
 function populateLocFilter(){
   const type = document.getElementById('fType').value;
   const sel = document.getElementById('fLocation');
   const prev = sel.value;
   let opts = ['<option value="all">ทั้งหมด</option>'];
-  const locs = type==='all' ? [...new Set([...locations.room, ...locations.fridge])] : (locations[type]||[]);
+  const locs = type==='all' ? [...new Set([...locations.room, ...locations.fridge, ...locations.freezer])] : (locations[type]||[]);
   locs.forEach(l=> opts.push(`<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`));
   sel.innerHTML = opts.join('');
   if(locs.includes(prev)) sel.value = prev;
@@ -717,7 +782,7 @@ function renderTable(data){
     const hs = r.hum!==null && r.hum!==undefined ? statusFor(r.type,'hum', r.hum) : null;
     return `<tr>
       <td>${r.date}</td><td>${r.slot}</td>
-      <td>${r.type==='room'?'ห้อง':'ตู้เย็น'}</td>
+      <td>${typeLabelShort(r.type)}</td>
       <td>${escapeHtml(r.location)}</td>
       <td class="${ts==='out'?'out':''}">${r.temp.toFixed(1)}</td>
       <td class="${hs==='out'?'out':''}">${r.hum!==null && r.hum!==undefined ? r.hum : '—'}</td>
@@ -744,7 +809,7 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   if(data.length===0){ toast('ไม่มีข้อมูลให้ส่งออก'); return; }
   const header = 'วันที่,เวลา,ประเภท,ตำแหน่ง,อุณหภูมิ(C),ความชื้น(%RH),โน้ต,ผู้บันทึก\n';
   const esc = (s)=> '"'+String(s===undefined||s===null?'':s).replace(/"/g,'""')+'"';
-  const rows = data.map(r=> [r.date, r.slot, r.type==='room'?'ห้อง':'ตู้เย็น', esc(r.location), r.temp, r.hum!==null&&r.hum!==undefined?r.hum:'', esc(r.note||''), esc(r.recorder||'')].join(',')).join('\n');
+  const rows = data.map(r=> [r.date, r.slot, typeLabelShort(r.type), esc(r.location), r.temp, r.hum!==null&&r.hum!==undefined?r.hum:'', esc(r.note||''), esc(r.recorder||'')].join(',')).join('\n');
   const blob = new Blob(['\uFEFF'+header+rows], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = 'lab-temp-log-'+todayStr()+'.csv'; a.click();
@@ -767,7 +832,7 @@ function renderMaintenance(){
   wrap.innerHTML = list.map(m=>`
     <div class="reading-row maint-row ${m.status==='resolved'?'resolved':''}">
       <div class="meta">
-        <b>${escapeHtml(m.location)}</b> &middot; ${m.type==='room'?'ห้อง':'ตู้เย็น'} &middot; ${m.date} ${m.time} ${m.recorder ? '&middot; แจ้งโดย '+escapeHtml(m.recorder) : ''}
+        <b>${escapeHtml(m.location)}</b> &middot; ${typeLabelShort(m.type)} &middot; ${m.date} ${m.time} ${m.recorder ? '&middot; แจ้งโดย '+escapeHtml(m.recorder) : ''}
         <span class="note">📝 ${escapeHtml(m.note)}</span>
       </div>
       <div class="maint-actions">
@@ -825,7 +890,7 @@ document.getElementById('testGasBtn').addEventListener('click', async ()=>{
   const statusEl = document.getElementById('gasStatus');
   statusEl.textContent = 'กำลังทดสอบ...';
   try{
-    const res = await gsStorage.get(THR_KEY);
+    const r = await gsStorage.get(THR_KEY);
     statusEl.textContent = '✅ เชื่อมต่อสำเร็จ';
     statusEl.style.color = 'var(--teal)';
   }catch(e){
@@ -834,11 +899,12 @@ document.getElementById('testGasBtn').addEventListener('click', async ()=>{
   }
 });
 
-// ---------- Settings tab ----------
+// ---------- Settings tab: locations ----------
 document.getElementById('addLocBtn').addEventListener('click', async ()=>{
   const type = document.getElementById('newLocType').value;
   const name = document.getElementById('newLocName').value.trim();
   if(!name){ toast('กรุณากรอกชื่อตำแหน่ง'); return; }
+  if(!locations[type]) locations[type] = [];
   if(locations[type].includes(name)){ toast('มีชื่อนี้อยู่แล้ว'); return; }
   locations[type].push(name);
   await saveLocations();
@@ -855,13 +921,22 @@ function renderSettings(){
   document.getElementById('thRoomHumMax').value = thresholds.roomHum[1];
   document.getElementById('thFridgeMin').value = thresholds.fridgeTemp[0];
   document.getElementById('thFridgeMax').value = thresholds.fridgeTemp[1];
+  document.getElementById('thFreezerMin').value = thresholds.freezerTemp[0];
+  document.getElementById('thFreezerMax').value = thresholds.freezerTemp[1];
+
+  const gasInput = document.getElementById('gasUrlInput');
+  if(gasInput) gasInput.value = (GAS_URL && GAS_URL.indexOf('PASTE_YOUR') === -1) ? GAS_URL : '';
 
   const list = document.getElementById('locManageList');
-  const all = [...locations.room.map(l=>({type:'room', name:l})), ...locations.fridge.map(l=>({type:'fridge', name:l}))];
+  const all = [
+    ...locations.room.map(l=>({type:'room', name:l})),
+    ...locations.fridge.map(l=>({type:'fridge', name:l})),
+    ...locations.freezer.map(l=>({type:'freezer', name:l}))
+  ];
   if(all.length===0){ list.innerHTML = '<div class="empty-state">ยังไม่มีตำแหน่งที่บันทึกไว้ — เพิ่มด้านบนได้เลย</div>'; return; }
   list.innerHTML = all.map(l=>`
     <div class="reading-row">
-      <div class="meta"><b>${escapeHtml(l.name)}</b> &middot; ${l.type==='room'?'ห้อง':'ตู้เย็น'}</div>
+      <div class="meta"><b>${escapeHtml(l.name)}</b> &middot; ${typeLabel(l.type)}</div>
       <button class="del-btn" data-type="${l.type}" data-name="${escapeHtml(l.name)}" title="ลบตำแหน่งนี้">✕</button>
     </div>`).join('');
   list.querySelectorAll('.del-btn').forEach(btn=>{
@@ -880,14 +955,13 @@ document.getElementById('saveThresholds').addEventListener('click', async ()=>{
   thresholds.roomTemp = [parseFloat(document.getElementById('thRoomTempMin').value), parseFloat(document.getElementById('thRoomTempMax').value)];
   thresholds.roomHum = [parseFloat(document.getElementById('thRoomHumMin').value), parseFloat(document.getElementById('thRoomHumMax').value)];
   thresholds.fridgeTemp = [parseFloat(document.getElementById('thFridgeMin').value), parseFloat(document.getElementById('thFridgeMax').value)];
+  thresholds.freezerTemp = [parseFloat(document.getElementById('thFreezerMin').value), parseFloat(document.getElementById('thFreezerMax').value)];
   await saveThresholds();
   toast('บันทึกเกณฑ์แล้ว ✓');
 });
 
 // ---------- Init ----------
 (async function init(){
-  const gasInput = document.getElementById('gasUrlInput');
-  if(gasInput) gasInput.value = (GAS_URL && GAS_URL.indexOf('PASTE_YOUR') === -1) ? GAS_URL : '';
   if(!GAS_URL || GAS_URL.indexOf('PASTE_YOUR') > -1){
     toast('ยังไม่ได้ตั้งค่าฐานข้อมูล — ไปที่แท็บ ⚙️ ตั้งค่า เพื่อใส่ลิงก์ Google Sheets', true);
   }
