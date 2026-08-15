@@ -376,6 +376,16 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
   <!-- SETTINGS TAB -->
   <section class="view" id="tab-settings">
+    <div class="card" id="settingsLock">
+      <h2><span class="eyebrow">พื้นที่จำกัดสิทธิ์</span>กรุณาใส่รหัสผ่านเพื่อเข้าตั้งค่า</h2>
+      <div class="field">
+        <label>รหัสผ่าน</label>
+        <input type="password" id="settingsPasswordInput" placeholder="กรอกรหัสผ่าน">
+      </div>
+      <button class="primary" id="unlockSettingsBtn">ปลดล็อก</button>
+      <div class="hint" id="settingsLockError" style="color:var(--red);"></div>
+    </div>
+    <div id="settingsContent" style="display:none;">
     <div class="card">
       <h2><span class="eyebrow">การเชื่อมต่อฐานข้อมูล</span>Google Sheets Web App URL</h2>
       <div class="field">
@@ -432,6 +442,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       </div>
       <button class="primary" id="saveThresholds" style="margin-top:16px;">บันทึกเกณฑ์</button>
     </div>
+    </div>
   </section>
 
   <footer class="note">ข้อมูลถูกเก็บใน Google Sheets ของคุณเอง ผ่าน Apps Script Web App — ทุกคนที่เปิดหน้านี้เห็นข้อมูลชุดเดียวกัน</footer>
@@ -446,6 +457,10 @@ const THR_KEY = 'lab-qc-thresholds';
 const MAINT_KEY = 'lab-qc-maintenance';
 const DEFAULT_THR = { roomTemp:[20,26], roomHum:[40,60], fridgeTemp:[2,8], freezerTemp:[-25,-15] };
 const DEFAULT_LOCS = { room: [], fridge: [], freezer: [] };
+
+// รหัสผ่านสำหรับปลดล็อกแท็บตั้งค่า (แก้ตรงนี้เพื่อเปลี่ยนรหัส)
+const SETTINGS_PASSWORD = 'lerdsin2026';
+let settingsUnlocked = (sessionStorage.getItem('settingsUnlocked') === '1');
 
 // ===== Google Sheets backend config =====
 let GAS_URL = 'https://script.google.com/macros/s/AKfycbz0AXWOeTjQ6k085Jvm-ojFxXuIgfBIM0bGhmlu2mGsUTdxGOQdsGsPH1ccC7DSdTtM/exec';
@@ -556,7 +571,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'view'){ await loadAll(); renderView(); }
     if(btn.dataset.tab === 'qr') renderQr();
-    if(btn.dataset.tab === 'settings') renderSettings();
+    if(btn.dataset.tab === 'settings') showSettingsTab();
     if(btn.dataset.tab === 'maintenance'){ await loadAll(); renderMaintenance(); }
     if(btn.dataset.tab === 'record') refreshLocSelect();
   });
@@ -892,6 +907,34 @@ function renderQr(){
   new QRCode(box, { text: url, width: 200, height: 200, colorDark:'#0b1420', colorLight:'#ffffff' });
 }
 document.getElementById('reloadQr').addEventListener('click', renderQr);
+
+// ---------- Settings tab: password gate ----------
+function showSettingsTab(){
+  if(settingsUnlocked){
+    document.getElementById('settingsLock').style.display = 'none';
+    document.getElementById('settingsContent').style.display = 'block';
+    renderSettings();
+  } else {
+    document.getElementById('settingsLock').style.display = 'block';
+    document.getElementById('settingsContent').style.display = 'none';
+    document.getElementById('settingsPasswordInput').value = '';
+    document.getElementById('settingsLockError').textContent = '';
+  }
+}
+document.getElementById('unlockSettingsBtn').addEventListener('click', tryUnlockSettings);
+document.getElementById('settingsPasswordInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') tryUnlockSettings();
+});
+function tryUnlockSettings(){
+  const val = document.getElementById('settingsPasswordInput').value;
+  if(val === SETTINGS_PASSWORD){
+    settingsUnlocked = true;
+    sessionStorage.setItem('settingsUnlocked', '1');
+    showSettingsTab();
+  } else {
+    document.getElementById('settingsLockError').textContent = 'รหัสผ่านไม่ถูกต้อง';
+  }
+}
 
 // ---------- Settings tab: DB connection ----------
 document.getElementById('saveGasUrlBtn').addEventListener('click', async ()=>{
